@@ -10,7 +10,7 @@ mutable struct Dir
 	size::Int
 end
 
-closedir(stack) = let dir = pop!(stack); stack[end].size += dir.size end
+closedir!(stack) = let dir = pop!(stack); stack[end].size += dir.size end
 
 stack::Vector{Dir} = []
 dirs::Vector{Dir} = []
@@ -26,7 +26,7 @@ for line ∈ stdin |> eachline
 
 	# cd
 	arg = line[6:end]
-	arg == ".." && (closedir(stack); continue)
+	arg == ".." && (closedir!(stack); continue)
 
 	dir = Dir(0)
 	push!(stack, dir)
@@ -34,7 +34,7 @@ for line ∈ stdin |> eachline
 end
 
 while length(stack) > 1
-	closedir(stack)
+	closedir!(stack)
 end
 
 const sizes = map(d -> d.size, dirs)
