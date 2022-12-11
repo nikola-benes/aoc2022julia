@@ -48,51 +48,43 @@ mutable struct Monkey
 	Monkey() = new(0)
 end
 
-function round!(monkeys, mod)
-	# mod == 0 means part 1
-	for m ∈ monkeys, item ∈ move!(m.items)
+function solve(monkeys, rounds, mod=0)
+	monkeys = deepcopy(monkeys)
+	relieve = mod == 0 ? x -> x ÷ 3 : x -> x % mod
+
+	for _ ∈ 1:rounds, m ∈ monkeys, item ∈ move!(m.items)
 		m.count += 1
-		item = m.op(item)
-		if mod == 0
-			item ÷= 3
-		else
-			item %= mod
-		end
+		item = item |> m.op |> relieve
 		next = item % m.test == 0 ? m.iftrue : m.iffalse
 		push!(monkeys[next].items, item)
 	end
-end
 
-function solve(monkeys, rounds, mod=0)
-	monkeys = deepcopy(monkeys)
-	for _ ∈ 1:rounds
-		round!(monkeys, mod)
-	end
 	monkeys .|> (m -> m.count) |>
-		(c -> partialsort(c, 1:2, rev=true)) |> prod
+		c -> partialsort(c, 1:2, rev=true) |> prod
 end
 
-monkeys::Vector{Monkey} = []
+m::Monkey = Monkey()
+monkeys::Vector{Monkey} = [m]
 
 for line ∈ stdin |> eachline
 	@matchswitch line begin
-		r"^Monkey" ->
-			push!(monkeys, Monkey())
+		r"^Monkey [1-9]" ->
+			push!(monkeys, global m = Monkey())
 		r"Starting items: (.*)" ->
-			monkeys[end].items = _[1] |> splitby(", ") .|> int
+			m.items = _[1] |> splitby(", ") .|> int
 		r"Operation: new = (.*)" ->
-			monkeys[end].op = @eval old -> $(Meta.parse(_[1]))
+			m.op = @eval old -> $(Meta.parse(_[1]))
 		r"Test: divisible by (.*)" ->
-			monkeys[end].test = int(_[1])
+			m.test = int(_[1])
 		r"If true: throw to monkey (.*)" ->
-			monkeys[end].iftrue = int(_[1]) + 1
+			m.iftrue = int(_[1]) + 1
 		r"If false: throw to monkey (.*)" ->
-			monkeys[end].iffalse = int(_[1]) + 1
+			m.iffalse = int(_[1]) + 1
 	end
 end
 
-solve(monkeys |> deepcopy, 20) |> println
+solve(monkeys, 20) |> println
 
-mod = reduce(lcm, monkeys .|> (m -> m.test))
+const mod = reduce(lcm, monkeys .|> m -> m.test)
 
 solve(monkeys, 10000, mod) |> println
