@@ -10,7 +10,8 @@ coords(s) = split(s, ",") .|> int |> Base.splat(C)
 crange(x, y) = isempty(x:y) ? (y:x) : (x:y)
 
 const rock = stdin |> eachline .|> splitby("->") .|> mapby(coords) .|>
-	(t -> map(crange, t, t[2:end])) |> Iterators.flatten |> reduceby(union)
+	(t -> map(crange, t, t[2:end])) |> Iterators.flatten |>
+	reduceby(union) |> Set
 
 function solve(rock, part)
 	start = C(500, 0)
@@ -24,7 +25,7 @@ function solve(rock, part)
 
 	s = start
 	while run(s)
-		opts = filter(fall, Ref(s) .+ SD)
+		opts = Iterators.filter(fall, Ref(s) .+ SD)
 		s = isempty(opts) ? (push!(sand, s); start) : first(opts)
 	end
 
