@@ -13,34 +13,43 @@ const goal = C(findfirst(==('.'), lines[end]), rows)
 const blizzards = [(p, dirs[at(p)]) for p ∈ bounds if at(p) != '.']
 
 function bfs(start, goal, blizzards, bounds, extratrips = 0)
-	Q = [(start, 1, 0)]  # position, time, which trip
-	V = Set(Q)
+	Q = [(start, 1)]  # position, time
+	# We only need to track the visited status of such (position, time)
+	# pairs where the time is exactly one step ahead of current time.
+	# Thus, we only keep the positions in V and flush it with every tick.
+	V = Set{C}()
 
 	bnext((pos, dir)) = (mod.(Tuple(pos + dir), bounds.indices) |> C, dir)
 	inbounds(p) = p ∈ bounds || p ∈ (start, goal)
-	ntrip(p, trip) = (p == goal && trip % 2 == 0) ||
-	                 (p == start && trip % 2 == 1) ? trip + 1 : trip
 
-	last = 0
+	trip = 0
+	target = goal
+	current = 0
 	bad = Set{C}()  # state at time 0 is irrelevant
 
 	while !isempty(Q)
-		pos, time, trip = popfirst!(Q)
-		if time > last
+		pos, time = popfirst!(Q)
+		if time > current
 			blizzards = blizzards .|> bnext
 			bad = Set(p for (p, _) ∈ blizzards)
-			last = time
+			current = time
+			empty!(V)
 		end
 
 		for npos ∈ Ref(pos) .+ steps
-			(!inbounds(npos) || npos ∈ bad) && continue
-			npos == goal && trip == extratrips && return time
+			(!inbounds(npos) || npos ∈ bad || npos ∈ V) && continue
 
-			new = (npos, time + 1, ntrip(npos, trip))
-			new ∈ V && continue
+			if npos == target
+				trip == extratrips && return time
+				trip += 1
+				# restart the search
+				empty!(Q)
+				empty!(V)
+				target = target == goal ? start : goal
+			end
 
-			push!(Q, new)
-			push!(V, new)
+			push!(Q, (npos, time + 1))
+			push!(V, npos)
 		end
 
 	end
